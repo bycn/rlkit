@@ -163,10 +163,11 @@ class TD3Trainer(TorchTrainer):
                 'Bellman Errors 2',
                 ptu.get_numpy(bellman_errors_2),
             ))
-            self.eval_statistics.update(create_stats_ordered_dict(
-                'Policy Action',
-                ptu.get_numpy(policy_actions),
-            ))
+            for i in range(policy_actions.shape[1]):
+                self.eval_statistics.update(create_stats_ordered_dict(
+                    'Policy Action%s' % i,
+                    ptu.get_numpy(policy_actions[:, i:i+1]),
+                ))
         self._n_train_steps_total += 1
 
     def get_diagnostics(self):

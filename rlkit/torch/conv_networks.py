@@ -2,8 +2,14 @@ import torch
 from torch import nn as nn
 
 from rlkit.pythonplusplus import identity
-
+from rlkit.policies.base import Policy
+from rlkit.torch.data_management.normalizer import TorchFixedNormalizer
+from rlkit.torch.modules import LayerNorm
+from rlkit.torch import pytorch_util as ptu
+from rlkit.torch.core import eval_np
 import numpy as np
+def identity(x):
+    return x
 
 
 class CNN(nn.Module):
@@ -22,7 +28,8 @@ class CNN(nn.Module):
             batch_norm_conv=False,
             batch_norm_fc=False,
             init_w=1e-4,
-            hidden_init=nn.init.xavier_uniform_,
+            # hidden_init=nn.init.xavier_uniform_,
+            hidden_init=nn.init.orthogonal_,
             hidden_activation=nn.ReLU(),
             output_activation=identity,
     ):
@@ -58,7 +65,7 @@ class CNN(nn.Module):
                              kernel_size,
                              stride=stride,
                              padding=padding)
-            hidden_init(conv.weight)
+            hidden_init(conv.weight, gain=np.sqrt(2))
             conv.bias.data.fill_(0)
 
             conv_layer = conv
@@ -80,14 +87,19 @@ class CNN(nn.Module):
             fc_layer = nn.Linear(fc_input_size, hidden_size)
 
             norm_layer = nn.BatchNorm1d(hidden_size)
-            fc_layer.weight.data.uniform_(-init_w, init_w)
-            fc_layer.bias.data.uniform_(-init_w, init_w)
+            # fc_layer.weight.data.uniform_(-init_w, init_w)
+            # fc_layer.bias.data.uniform_(-init_w, init_w)
+            fc_layer.bias.data.fill_(0.)
+            hidden_init(fc_layer.weight, gain=np.sqrt(2))
 
             self.fc_layers.append(fc_layer)
             self.fc_norm_layers.append(norm_layer)
             fc_input_size = hidden_size
 
         self.last_fc = nn.Linear(fc_input_size, output_size)
+        hardcode_lastinit = 1e-6
+        init_w = hardcode_lastinit
+
         self.last_fc.weight.data.uniform_(-init_w, init_w)
         self.last_fc.bias.data.uniform_(-init_w, init_w)
 
@@ -97,20 +109,22 @@ class CNN(nn.Module):
         conv_input = input.narrow(start=0,
                                   length=self.conv_input_length,
                                   dim=1).contiguous()
+        conv_input = conv_input.mul(1. / 255)
         if fc_input:
             extra_fc_input = input.narrow(start=self.conv_input_length,
                                           length=self.added_fc_input_size,
                                           dim=1)
+
         # need to reshape from batch of flattened images into (channsls, w, h)
         h = conv_input.view(conv_input.shape[0],
                             self.input_channels,
                             self.input_height,
                             self.input_width)
-
         h = self.apply_forward(h, self.conv_layers, self.conv_norm_layers,
                                use_batch_norm=self.batch_norm_conv)
         # flatten channels for fc layers
         h = h.view(h.size(0), -1)
+
         if fc_input:
             h = torch.cat((h, extra_fc_input), dim=1)
         h = self.apply_forward(h, self.fc_layers, self.fc_norm_layers,
@@ -128,6 +142,46 @@ class CNN(nn.Module):
                 h = norm_layer(h)
             h = self.hidden_activation(h)
         return h
+
+class FlattenCNN(CNN):
+    #assumes obs, then action
+    def forward(self, *inputs, **kwargs):
+        flat_inputs = torch.cat(inputs, dim=1)
+        return super().forward(flat_inputs, **kwargs)
+
+class CNNPolicy(CNN, Policy):
+    """
+    A simpler interface for creating policies.
+    """
+
+    def __init__(
+            self,
+            *args,
+            obs_normalizer: TorchFixedNormalizer = None,
+            **kwargs
+    ):
+        super().__init__(*args, **kwargs)
+        self.obs_normalizer = obs_normalizer
+
+    def forward(self, obs, **kwargs):
+        if self.obs_normalizer:
+            obs = self.obs_normalizer.normalize(obs)
+        return super().forward(obs, **kwargs)
+
+    def get_action(self, obs_np):
+        actions = self.get_actions(obs_np[None])
+        return actions[0, :], {}
+
+    def get_actions(self, obs):
+        return eval_np(self, obs)
+
+
+class TanhCNNPolicy(CNNPolicy):
+    """
+    A helper class since most policies have a tanh output activation.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, output_activation=torch.tanh, **kwargs)
 
 
 class TwoHeadDCNN(nn.Module):
