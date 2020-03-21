@@ -31,7 +31,7 @@ class CNN(nn.Module):
             # hidden_init=nn.init.xavier_uniform_,
             hidden_init=nn.init.orthogonal_,
             hidden_activation=nn.ReLU(),
-            output_activation=identity,
+            output_activation=identity
     ):
         if hidden_sizes is None:
             hidden_sizes = []
@@ -109,13 +109,13 @@ class CNN(nn.Module):
         conv_input = input.narrow(start=0,
                                   length=self.conv_input_length,
                                   dim=1).contiguous()
-        conv_input = conv_input.mul(1. / 255)
+        # conv_input = conv_input.mul(1. / 255)
         if fc_input:
             extra_fc_input = input.narrow(start=self.conv_input_length,
                                           length=self.added_fc_input_size,
                                           dim=1)
 
-        # need to reshape from batch of flattened images into (channsls, w, h)
+        # need to reshape from batch of flattened images into (channels, w, h)
         h = conv_input.view(conv_input.shape[0],
                             self.input_channels,
                             self.input_height,
