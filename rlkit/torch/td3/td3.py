@@ -168,9 +168,9 @@ class TD3Trainer(TorchTrainer):
                     'Policy Action%s' % i,
                     ptu.get_numpy(policy_actions[:, i:i+1]),
                 ))
-            policy_grads = np.concatenate([ptu.get_numpy(a.grad).flatten() if a.grad is not None else [0] for a in self.policy.parameters()]).flatten()
+            policy_grads = np.array([np.linalg.norm(ptu.get_numpy(a.grad)) if a.grad is not None else [0] for a in self.policy.parameters()]).flatten()
             pg_stats = OrderedDict({})
-            pg_stats["Policy Gradients/Mean"] = np.mean(policy_grads)
+            pg_stats["Policy Gradient Norm/Mean"] = np.mean(policy_grads)
             self.eval_statistics.update(pg_stats)
         self._n_train_steps_total += 1
 

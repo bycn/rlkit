@@ -169,26 +169,14 @@ class NormalizedBoxEnv(ProxyEnv):
     def __str__(self):
         return "Normalized: %s" % self._wrapped_env
 
-class ProcessObservationWrapper(gym.ObservationWrapper):
-    ''' 
-    #from midlevel reps alex sax
-    Wraps an environment so that instead of
-            obs = env.step(),
-            it runs
-            obs = transform(env.step())
-        
-        Args:
-            transform: a function that transforms obs
-            obs_shape: the final obs_shape is needed to set the observation space of the env
-    '''
-    def __init__(self, env, transform):
-        super().__init__(env)
-        ## TODO can get observation space 
-        example_obs = env.reset()
-        transform(example_obs)
-        self.observation_space = obs_space
-        self.transform = transform
+class TransformObservationWrapper(gym.ObservationWrapper):
 
-        
+    def __init__(self, env, transform):
+        super(TransformObservationWrapper, self).__init__(env)
+        self.transform = transform
+        exobs = env.reset()
+        shape = transform(exobs).shape
+        self.observation_space = Box(low=-10, high=10, shape=
+                    shape)
     def observation(self, observation):
         return self.transform(observation)
