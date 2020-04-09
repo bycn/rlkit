@@ -58,7 +58,7 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
         self._log_stats(epoch)
 
         self.expl_data_collector.end_epoch(epoch)
-        self.eval_data_collector.end_epoch(epoch)
+        # self.eval_data_collector.end_epoch(epoch)
         self.replay_buffer.end_epoch(epoch)
         self.trainer.end_epoch(epoch)
 
@@ -71,8 +71,8 @@ class BaseRLAlgorithm(object, metaclass=abc.ABCMeta):
             snapshot['trainer/' + k] = v
         for k, v in self.expl_data_collector.get_snapshot().items():
             snapshot['exploration/' + k] = v
-        for k, v in self.eval_data_collector.get_snapshot().items():
-            snapshot['evaluation/' + k] = v
+        # for k, v in self.eval_data_collector.get_snapshot().items():
+        #     snapshot['evaluation/' + k] = v
         for k, v in self.replay_buffer.get_snapshot().items():
             snapshot['replay_buffer/' + k] = v
         return snapshot

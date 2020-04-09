@@ -55,12 +55,13 @@ class BatchRLAlgorithm(BaseRLAlgorithm, metaclass=abc.ABCMeta):
                 range(self._start_epoch, self.num_epochs),
                 save_itrs=True,
         ):
-            self.eval_data_collector.collect_new_paths(
-                self.max_path_length,
-                self.num_eval_steps_per_epoch,
-                discard_incomplete_paths=True,
-            )
-            gt.stamp('evaluation sampling')
+
+            # self.eval_data_collector.collect_new_paths(
+            #     self.max_path_length,
+            #     self.num_eval_steps_per_epoch,
+            #     discard_incomplete_paths=True,
+            # )
+            # gt.stamp('evaluation sampling')
 
             for _ in range(self.num_train_loops_per_epoch):
                 new_expl_paths = self.expl_data_collector.collect_new_paths(

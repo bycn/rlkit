@@ -278,6 +278,10 @@ class Logger(object):
         self._prefix_str = ''.join(self._prefixes)
 
     def save_itr_params(self, itr, params):
+        key = None
+        for k in list(params.keys()):
+            if k.endswith('env'):
+                del params[k]
         if self._snapshot_dir:
             if self._snapshot_mode == 'all':
                 file_name = osp.join(self._snapshot_dir, 'itr_%d.pkl' % itr)
